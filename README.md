@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # SmartAgri-Guide Frontend
 
 Angular frontend for SmartAgri-Guide, built with Angular (standalone components).
@@ -98,3 +99,6 @@ Angular CLI does not come with an end-to-end testing framework by default. You c
 ## Additional Resources
 
 For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+=======
+# SmartAgri-Guide-Frontend_v1
+>>>>>>> 471adb53b2638291bac7e9391c8ad16a6ae0b80d
