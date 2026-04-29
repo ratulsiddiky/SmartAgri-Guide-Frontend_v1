@@ -93,6 +93,10 @@ login(username: string, password: string): Observable<AuthResponse> {
     return this.currentUserSignal()?.role || '';
   }
 
+  getUserId(): string {
+    return this.currentUserSignal()?._id || '';
+  }
+
   setSession(data: AuthResponse) {
     localStorage.setItem('auth_token', data.token);
     localStorage.setItem('username', data.username);
@@ -103,7 +107,14 @@ login(username: string, password: string): Observable<AuthResponse> {
       localStorage.removeItem('role');
     }
 
+    if (data.user_id) {
+      localStorage.setItem('user_id', data.user_id);
+    } else {
+      localStorage.removeItem('user_id');
+    }
+
     this.currentUserSignal.set({
+      _id: data.user_id,
       username: data.username,
       role: data.role,
       token: data.token,
@@ -114,6 +125,7 @@ login(username: string, password: string): Observable<AuthResponse> {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('username');
     localStorage.removeItem('role');
+    localStorage.removeItem('user_id');
     this.currentUserSignal.set(null);
   }
 
@@ -131,6 +143,7 @@ login(username: string, password: string): Observable<AuthResponse> {
     }
 
     return {
+      _id: localStorage.getItem('user_id') || undefined,
       username,
       role: localStorage.getItem('role') || undefined,
       token,

@@ -85,6 +85,12 @@ export class ApiService {
     );
   }
 
+  getMyFarms(page = 1, limit = 9) {
+    return this.http.get<FarmListResponse>(
+      `${this.baseUrl}/farms/my?page=${page}&limit=${limit}`
+    );
+  }
+
   getFarmById(id: string) {
     return this.http.get<Farm>(`${this.baseUrl}/farms/${id}`);
   }

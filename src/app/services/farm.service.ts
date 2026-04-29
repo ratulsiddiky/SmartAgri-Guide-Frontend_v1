@@ -57,6 +57,26 @@ export class FarmService {
     );
   }
 
+  getMyFarms(page = 1, limit = 9) {
+    return this.api.getMyFarms(page, limit).pipe(
+      map((response): FarmListResult => ({
+        data: response.data || [],
+        pagination: {
+          page: response.pagination?.page ?? page,
+          limit: response.pagination?.limit ?? limit,
+          total: response.pagination?.total ?? 0,
+          has_next: response.pagination?.has_next ?? false,
+        },
+      })),
+      catchError((error) =>
+        this.rethrowAsHttpError(
+          error,
+          'Unable to load your farms right now. Please check your connection and try again.'
+        )
+      )
+    );
+  }
+
   getFarms(page = 1, limit = 9) {
     return this.api.getFarms(page, limit).pipe(
       map((response): FarmListResult => {

@@ -26,6 +26,7 @@ export class FarmsList implements OnInit {
   error = false;
   errorMessage = '';
   deletingFarmId = '';
+  showMyFarms = false;
 
   constructor(
     private readonly farmService: FarmService,
@@ -41,11 +42,15 @@ export class FarmsList implements OnInit {
       : fallback;
   }
 
-
   ngOnInit(): void {
     this.loadFarms();
   }
 
+  toggleMyFarms(): void {
+    this.showMyFarms = !this.showMyFarms;
+    this.query = '';
+    this.loadFarms(1);
+  }
 
   loadFarms(page = this.page): void {
     this.loading = true;
@@ -53,7 +58,11 @@ export class FarmsList implements OnInit {
     this.errorMessage = '';
     this.page = page;
 
-    this.farmService.getFarms(this.page, this.pageSize).subscribe({
+    const request = this.showMyFarms
+      ? this.farmService.getMyFarms(this.page, this.pageSize)
+      : this.farmService.getFarms(this.page, this.pageSize);
+
+    request.subscribe({
       next: (response) => {
         this.totalFarms = response.pagination.total;
         this.hasNext = response.pagination.has_next;
@@ -61,12 +70,6 @@ export class FarmsList implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        console.error(
-          this.getErrorMessage(
-            err,
-            'Unable to load farms right now. Please try again shortly.'
-          )
-        );
         this.error = true;
         this.errorMessage = this.getErrorMessage(
           err,
