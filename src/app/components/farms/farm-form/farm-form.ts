@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ApiService } from '../../../services/api.service';
+import { FarmService } from '../../../services/farm.service';
 import { NotificationService } from '../../../services/notification.service';
 
 @Component({
@@ -36,7 +36,7 @@ export class FarmForm implements OnInit {
   successMessage = '';
 
   constructor(
-    private readonly apiService: ApiService,
+    private readonly farmService: FarmService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly notificationService: NotificationService
@@ -51,9 +51,6 @@ export class FarmForm implements OnInit {
       : fallback;
   }
 
-  /**
-   * Initializes form mode and loads existing farm data for edit flow.
-   */
   ngOnInit(): void {
     this.farmForm.enable();
     this.farmId = this.route.snapshot.paramMap.get('id') || '';
@@ -64,15 +61,12 @@ export class FarmForm implements OnInit {
     }
   }
 
-  /**
-   * Loads existing farm details and patches form values for editing.
-   */
   loadFarmForEdit(): void {
     this.loading = true;
     this.errorMessage = '';
     this.farmForm.disable();
 
-    this.apiService.getFarmById(this.farmId).subscribe({
+    this.farmService.getFarmById(this.farmId).subscribe({
       next: (farm) => {
         this.farmForm.patchValue({
           farm_name: farm.farm_name || '',
@@ -93,9 +87,6 @@ export class FarmForm implements OnInit {
     });
   }
 
-  /**
-   * Submits form data and routes to create or update handlers.
-   */
   onSubmit(): void {
     if (this.farmForm.invalid) {
       this.farmForm.markAllAsTouched();
@@ -123,15 +114,12 @@ export class FarmForm implements OnInit {
     this.createFarm(payload);
   }
 
-  /**
-   * Creates a new farm record using the API POST endpoint.
-   */
   createFarm(payload: {
     farm_name: string;
     crop_type: string;
     address: { area_name: string };
   }): void {
-    this.apiService.createFarm(payload).subscribe({
+    this.farmService.createFarm(payload).subscribe({
       next: (response) => {
         this.successMessage = response.message || 'Farm created successfully.';
         this.notificationService.showSuccess(this.successMessage);
@@ -156,15 +144,12 @@ export class FarmForm implements OnInit {
     });
   }
 
-  /**
-   * Updates an existing farm record using the API PUT endpoint.
-   */
   updateFarm(payload: {
     farm_name: string;
     crop_type: string;
     address: { area_name: string };
   }): void {
-    this.apiService.updateFarm(this.farmId, payload).subscribe({
+    this.farmService.updateFarm(this.farmId, payload).subscribe({
       next: (response) => {
         this.successMessage = response.message || 'Farm updated successfully.';
         this.notificationService.showSuccess(this.successMessage);
