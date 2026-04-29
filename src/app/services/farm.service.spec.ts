@@ -31,6 +31,16 @@ describe('FarmService', () => {
           message: 'ok',
           data: { community_avg_temp: 0, total_farms_included: 0 },
         }),
+      getErrorMessage: (error: any): string => {
+        const msg = error?.error?.message;
+        if (typeof msg === 'string' && msg.trim()) return msg;
+        if (error?.status === 400) return 'The request could not be completed because the farm data was invalid.';
+        if (error?.status === 401) return 'You are not signed in or your session has expired. Please log in again.';
+        if (error?.status === 403) return 'You do not have permission to perform this farm action.';
+        if (error?.status === 404) return 'The requested farm record could not be found.';
+        if (error?.status >= 500) return 'The server was unable to complete the farm request. Please try again later.';
+        return '';
+      },
     };
 
     TestBed.configureTestingModule({

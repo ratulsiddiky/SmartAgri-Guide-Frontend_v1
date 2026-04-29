@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
 import { Farm, FarmSensor } from '../../../models/farm.model';
+import { ApiService } from '../../../services/api.service';
 import { FarmService } from '../../../services/farm.service';
 import { HighlightStatusDirective } from '../../../directives/highlight-status.directive';
 
@@ -43,16 +44,9 @@ export class FarmDetail implements OnInit {
 
   constructor(
     private readonly route: ActivatedRoute,
+    private readonly api: ApiService,
     private readonly farmService: FarmService
   ) {}
-
-  private getErrorMessage(error: unknown, fallback: string): string {
-    const backendMessage = (error as { error?: { message?: unknown } } | null)?.error
-      ?.message;
-    return typeof backendMessage === 'string' && backendMessage.trim()
-      ? backendMessage
-      : fallback;
-  }
 
   get farmId(): string {
     return this.route.snapshot.paramMap.get('id') || '';
@@ -87,10 +81,8 @@ export class FarmDetail implements OnInit {
         },
         error: (err) => {
           this.error = true;
-          this.errorMessage = this.getErrorMessage(
-            err,
-            `Unable to load farm '${this.farmId}'. Please refresh and try again.`
-          );
+          this.errorMessage = this.api.getErrorMessage(err) ||
+            `Unable to load farm '${this.farmId}'. Please refresh and try again.`;
           console.error(this.errorMessage);
         },
       });
@@ -101,10 +93,8 @@ export class FarmDetail implements OnInit {
       next: (data) => (this.insights = data.dashboard_data as FarmInsights),
       error: (err) => {
         console.error(
-          this.getErrorMessage(
-            err,
+          this.api.getErrorMessage(err) ||
             `Unable to load insights for farm '${this.farmId}'.`
-          )
         );
       },
     });
@@ -115,10 +105,8 @@ export class FarmDetail implements OnInit {
       next: (data) => (this.irrigation = data as IrrigationStatus),
       error: (err) => {
         console.error(
-          this.getErrorMessage(
-            err,
+          this.api.getErrorMessage(err) ||
             `Unable to calculate irrigation status for farm '${this.farmId}'.`
-          )
         );
       },
     });
@@ -135,10 +123,9 @@ export class FarmDetail implements OnInit {
         this.loadFarmData(); // Replaced this.ngOnInit() with this.loadFarmData()
       },
       error: (err) => {
-        const message = this.getErrorMessage(
-          err,
-          `Weather sync failed for farm '${this.farmId}'. Please verify the coordinates and try again.`
-        );
+        const message =
+          this.api.getErrorMessage(err) ||
+          `Weather sync failed for farm '${this.farmId}'. Please verify the coordinates and try again.`;
         this.syncMessage = `❌ ${message}`;
         this.showToast(message, 'danger');
         this.syncLoading = false;
@@ -159,10 +146,9 @@ export class FarmDetail implements OnInit {
         this.loadFarmData(); // Replaced this.ngOnInit() with this.loadFarmData()
       },
       error: (err) => {
-        this.sensorMessage = this.getErrorMessage(
-          err,
-          `Unable to add the sensor to farm '${this.farmId}'. Please check the sensor details and try again.`
-        );
+        this.sensorMessage =
+          this.api.getErrorMessage(err) ||
+          `Unable to add the sensor to farm '${this.farmId}'. Please check the sensor details and try again.`;
       },
     });
   }

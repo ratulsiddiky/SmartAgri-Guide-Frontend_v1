@@ -33,7 +33,7 @@ export class Login {
     private readonly notificationService: NotificationService
   ) {
     if (this.authService.isAuthenticated()) {
-      void this.router.navigate(['/farms']);
+      void this.router.navigate(['/home']);
     }
   }
 
@@ -58,7 +58,7 @@ export class Login {
     this.authService.login(username, password).subscribe({
       next: () => {
         this.loading = false;
-        void this.router.navigate(['/farms']);
+        void this.router.navigate(['/home']);
       },
       error: (err) => {
         this.loading = false;

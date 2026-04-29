@@ -13,7 +13,13 @@ export const protectedRoutes: Routes = [
     canActivateChild: [authChildGuard],
     children: [
       {
+        path: 'home',
+        loadComponent: () =>
+          import('./components/dashboard/home/home').then((m) => m.Home),
+      },
+      {
         path: '',
+        pathMatch: 'full',
         loadComponent: () =>
           import('./components/dashboard/home/home').then((m) => m.Home),
       },

@@ -28,6 +28,24 @@ describe('ApiService', () => {
     expect(service).toBeTruthy();
   });
 
+  it('should prefer backend error messages when present', () => {
+    expect(
+      service.getErrorMessage({ error: { message: 'Backend validation failed' } })
+    ).toBe('Backend validation failed');
+  });
+
+  it('should map HTTP statuses to reusable error messages', () => {
+    expect(service.getErrorMessage({ status: 401 })).toBe(
+      'You are not signed in or your session has expired. Please log in again.'
+    );
+    expect(service.getErrorMessage({ status: 404 })).toBe(
+      'The requested farm record could not be found.'
+    );
+    expect(service.getErrorMessage({ status: 500 })).toBe(
+      'The server was unable to complete the farm request. Please try again later.'
+    );
+  });
+
   it('should request paginated farms via getFarms and return API response', async () => {
     const expectedResponse: FarmListResponse = {
       data: [
@@ -53,7 +71,7 @@ describe('ApiService', () => {
     const responsePromise = firstValueFrom(service.getFarms(2, 9));
 
     const request = httpMock.expectOne(
-      'http://localhost:5001/api/farms?page=2&limit=9'
+      'http://127.0.0.1:5001/api/farms?page=2&limit=9'
     );
     expect(request.request.method).toBe('GET');
 
@@ -71,7 +89,7 @@ describe('ApiService', () => {
 
     const responsePromise = firstValueFrom(service.createFarm(payload));
 
-    const request = httpMock.expectOne('http://localhost:5001/api/farms');
+    const request = httpMock.expectOne('http://127.0.0.1:5001/api/farms');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual(payload);
 
@@ -87,7 +105,7 @@ describe('ApiService', () => {
   it('should DELETE a farm by id', async () => {
     const responsePromise = firstValueFrom(service.deleteFarm('farm-321'));
 
-    const request = httpMock.expectOne('http://localhost:5001/api/farms/farm-321');
+    const request = httpMock.expectOne('http://127.0.0.1:5001/api/farms/farm-321');
     expect(request.request.method).toBe('DELETE');
 
     request.flush(null);

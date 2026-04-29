@@ -49,6 +49,36 @@ export class ApiService {
 
   constructor(private readonly http: HttpClient) {}
 
+  public getErrorMessage(error: any): string {
+    const backendMessage = error?.error?.message;
+
+    if (typeof backendMessage === 'string' && backendMessage.trim()) {
+      return backendMessage;
+    }
+
+    if (error?.status === 400) {
+      return 'The request could not be completed because the farm data was invalid.';
+    }
+
+    if (error?.status === 401) {
+      return 'You are not signed in or your session has expired. Please log in again.';
+    }
+
+    if (error?.status === 403) {
+      return 'You do not have permission to perform this farm action.';
+    }
+
+    if (error?.status === 404) {
+      return 'The requested farm record could not be found.';
+    }
+
+    if (error?.status >= 500) {
+      return 'The server was unable to complete the farm request. Please try again later.';
+    }
+
+    return '';
+  }
+
   getFarms(page = 1, limit = 20) {
     return this.http.get<Farm[] | FarmListResponse>(
       `${this.baseUrl}/farms?page=${page}&limit=${limit}`

@@ -35,12 +35,11 @@ describe('Home', () => {
 
     fixture = TestBed.createComponent(Home);
     component = fixture.componentInstance;
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
   it('should create', () => {
-    const fixture = TestBed.createComponent(Home);
-    const component = fixture.componentInstance;
     expect(component).toBeTruthy();
   });
 });

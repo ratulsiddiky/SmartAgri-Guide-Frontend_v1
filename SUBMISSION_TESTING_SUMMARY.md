@@ -9,7 +9,7 @@ This document summarizes the automated testing strategy used in AgriGuide to pro
 
 Latest execution used for this submission:
 - Command: `npm run test:ci`
-- Result: **12 test files passed, 18 tests passed, 0 failed**
+- Result: **12 test files passed, 26 tests passed, 0 failed**
 
 ## Testing Strategy Overview
 
@@ -27,9 +27,14 @@ The strategy prioritizes:
 - `src/app/components/farms/farm-form/farm-form.spec.ts`
 - `src/app/components/farms/farms-list/farms-list.spec.ts`
 - `src/app/components/farms/farm-detail/farm-detail.spec.ts`
+- `src/app/components/dashboard/home/home.spec.ts`
 - `src/app/components/dashboard/admin-dashboard/admin-dashboard.spec.ts`
+- `src/app/services/api.service.spec.ts`
+- `src/app/services/farm.service.spec.ts`
 - `src/app/guards/auth.guard.spec.ts`
 - `src/app/interceptors/auth.interceptor.spec.ts`
+- `src/app/directives/highlight-status.directive.spec.ts`
+- `src/app/app.spec.ts`
 
 ## What These Tests Cover
 
@@ -48,6 +53,14 @@ The strategy prioritizes:
 
 ### 4. JWT Token Propagation and Request Security
 - `auth.interceptor.spec.ts`: verifies interceptor attaches `Authorization: Bearer <token>` header to outgoing HTTP requests.
+
+### 5. Service Layer and HTTP Contract Tests
+- `api.service.spec.ts`: verifies correct HTTP method, URL, and payload for GET (paginated farms), POST (create farm), and DELETE requests against the live API contract.
+- `farm.service.spec.ts`: verifies error-message extraction logic — backend messages are passed through and missing fields fall back to user-friendly copy.
+
+### 6. Component Creation and Directive Behaviour
+- `home.spec.ts`: verifies the home dashboard renders after fetching farm stats.
+- `highlight-status.directive.spec.ts`: verifies the custom directive applies correct warning/ok styles based on sensor values.
 
 ## CW2 Rubric Alignment
 

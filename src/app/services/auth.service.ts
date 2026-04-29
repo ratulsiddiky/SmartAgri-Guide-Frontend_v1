@@ -10,6 +10,7 @@ export interface AuthResponse {
   token: string;
   username: string;
   role?: string;
+  user_id?: string;
 }
 
 export interface RegisterRequest {
