@@ -46,13 +46,6 @@ export const protectedRoutes: Routes = [
           ),
       },
       {
-        path: 'agri-markets',
-        loadComponent: () =>
-          import('./components/dashboard/agri-markets/agri-markets').then(
-            (m) => m.AgriMarkets
-          ),
-      },
-      {
         path: 'admin',
         canMatch: [adminMatchGuard],
         canActivate: [adminGuard],
