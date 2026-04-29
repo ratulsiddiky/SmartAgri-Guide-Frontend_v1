@@ -9,6 +9,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { authInterceptor } from './auth.interceptor';
+import { AuthService } from '../services/auth.service';
 
 describe('authInterceptor', () => {
   beforeEach(() => {
@@ -20,10 +21,14 @@ describe('authInterceptor', () => {
         provideHttpClientTesting(),
       ],
     });
+
+    // Reset the auth signal so each test starts with a clean state
+    TestBed.inject(AuthService).clearSession();
   });
 
   it('should attach Bearer token to outgoing requests', () => {
-    localStorage.setItem('auth_token', 'test-token-123');
+    // Use setSession to update both localStorage and the reactive signal
+    TestBed.inject(AuthService).setSession({ token: 'test-token-123', username: 'test' });
 
     const http = TestBed.inject(HttpClient);
     const httpMock = TestBed.inject(HttpTestingController);

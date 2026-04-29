@@ -17,7 +17,6 @@
       <div class="navbar-nav ms-auto align-items-lg-center flex-wrap gap-0 gap-lg-2">
         <a class="nav-link" routerLink="/">Home</a>
         <a class="nav-link" routerLink="/farms">All Farms</a>
-        <a class="nav-link" routerLink="/agri-markets">Agri-Markets</a>
         @if (auth.isLoggedIn() && auth.getRole() === 'admin') {
           <a class="nav-link" routerLink="/admin">Admin Dashboard</a>
         }
