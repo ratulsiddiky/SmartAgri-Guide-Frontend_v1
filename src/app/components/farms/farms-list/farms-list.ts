@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -34,7 +34,8 @@ export class FarmsList implements OnInit, OnDestroy {
 
   constructor(
     private readonly farmService: FarmService,
-    public readonly authService: AuthService
+    public readonly authService: AuthService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   private getErrorMessage(error: unknown, fallback: string): string {
@@ -67,6 +68,7 @@ export class FarmsList implements OnInit, OnDestroy {
     this.error = false;
     this.errorMessage = '';
     this.page = page;
+    this.cdr.markForCheck();
 
     const request = this.showMyFarms
       ? this.farmService.getMyFarms(this.page, this.pageSize)
@@ -80,6 +82,7 @@ export class FarmsList implements OnInit, OnDestroy {
           this.hasNext = response.pagination.has_next;
           this.farms = this.sortFarms(response.data);
           this.loading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.error = true;
@@ -88,6 +91,7 @@ export class FarmsList implements OnInit, OnDestroy {
             'Could not connect to the server. Please make sure the backend is running on port 5001.'
           );
           this.loading = false;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -105,6 +109,7 @@ export class FarmsList implements OnInit, OnDestroy {
     this.farms = [];
     this.error = false;
     this.errorMessage = '';
+    this.cdr.markForCheck();
 
     this.farmService.searchFarms(searchTerm)
       .pipe(takeUntil(this.destroy$))
@@ -115,6 +120,7 @@ export class FarmsList implements OnInit, OnDestroy {
           this.hasNext = false;
           this.farms = this.sortFarms(data);
           this.loading = false;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           console.error(
@@ -129,6 +135,7 @@ export class FarmsList implements OnInit, OnDestroy {
             'Search failed. Please try a different term.'
           );
           this.loading = false;
+          this.cdr.markForCheck();
         },
       });
   }
@@ -146,6 +153,7 @@ export class FarmsList implements OnInit, OnDestroy {
 
   onSortChange(): void {
     this.farms = this.sortFarms(this.farms);
+    this.cdr.markForCheck();
   }
 
 
@@ -170,6 +178,7 @@ export class FarmsList implements OnInit, OnDestroy {
     if (!farmId) {
       this.error = true;
       this.errorMessage = 'Unable to delete farm because the identifier is missing.';
+      this.cdr.markForCheck();
       return;
     }
 
@@ -184,6 +193,7 @@ export class FarmsList implements OnInit, OnDestroy {
     this.deletingFarmId = farmId;
     this.error = false;
     this.errorMessage = '';
+    this.cdr.markForCheck();
 
     this.farmService.deleteFarm(farmId)
       .pipe(takeUntil(this.destroy$))
@@ -195,6 +205,7 @@ export class FarmsList implements OnInit, OnDestroy {
             return;
           }
           this.loadFarms(this.page);
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.deletingFarmId = '';
@@ -203,6 +214,7 @@ export class FarmsList implements OnInit, OnDestroy {
             err,
             'Delete failed. You may need admin permissions to remove this farm.'
           );
+          this.cdr.markForCheck();
         },
       });
   }
