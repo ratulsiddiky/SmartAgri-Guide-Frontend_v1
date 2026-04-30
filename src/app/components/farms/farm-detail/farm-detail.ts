@@ -25,7 +25,7 @@ interface IrrigationStatus {
 @Component({
   selector: 'app-farm-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, HighlightStatusDirective, SensorStatusPipe],
+  imports: [CommonModule, RouterLink, FormsModule, HighlightStatusDirective],
   templateUrl: './farm-detail.html',
   styleUrl: './farm-detail.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
