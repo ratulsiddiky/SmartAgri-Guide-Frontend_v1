@@ -63,15 +63,20 @@ export class Login implements OnDestroy {
     this.loading = true;
     this.errorMessage = '';
 
+    
+    this.loginForm.disable();
+
     this.authService.login(username, password)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
           this.loading = false;
+          this.loginForm.enable();
           void this.router.navigate(['/home']);
         },
         error: (err) => {
           this.loading = false;
+          this.loginForm.enable();
           this.errorMessage =
             err.error?.message || 'Login failed. Please check your credentials.';
           this.notificationService.showError(this.errorMessage);

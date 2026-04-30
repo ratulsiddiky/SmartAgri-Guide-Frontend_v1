@@ -30,7 +30,6 @@
               class="form-control"
               placeholder="Enter username"
               formControlName="username"
-              [disabled]="loading"
             />
             @if (loginForm.controls.username.touched && loginForm.controls.username.invalid) {
               <div class="text-danger small mt-1">Username is required.</div>
@@ -45,7 +44,6 @@
               class="form-control"
               placeholder="Enter password"
               formControlName="password"
-              [disabled]="loading"
               (keyup.enter)="onLogin()"
             />
             @if (loginForm.controls.password.touched && loginForm.controls.password.invalid) {
@@ -56,7 +54,6 @@
           <button
             type="submit"
             class="btn btn-success w-100"
-            [disabled]="loading"
           >
             @if (loading) {
               <span class="spinner-border spinner-border-sm me-2"></span>
