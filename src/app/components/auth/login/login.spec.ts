@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
+import { signal } from '@angular/core';
 import { AuthService } from '../../../services/auth.service';
+import { NotificationService } from '../../../services/notification.service';
 
 import { Login } from './login';
 
@@ -18,6 +20,13 @@ describe('Login', () => {
           useValue: {
             isAuthenticated: () => false,
             login: () => ({ subscribe: () => undefined }),
+            emailVerifiedSuccessfully: signal(false), 
+          },
+        },
+        {
+          provide: NotificationService,
+          useValue: {
+            showError: () => {},
           },
         },
       ],
