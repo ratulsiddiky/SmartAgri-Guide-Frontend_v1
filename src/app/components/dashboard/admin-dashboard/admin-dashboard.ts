@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormControl,
@@ -6,7 +6,8 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { finalize } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { finalize, takeUntil } from 'rxjs/operators';
 import { FarmService } from '../../../services/farm.service';
 import { BroadcastAlertRequest } from '../../../services/api.service';
 import { AuthService } from '../../../services/auth.service';
@@ -17,9 +18,11 @@ import { AuthService } from '../../../services/auth.service';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './admin-dashboard.html',
   styleUrl: './admin-dashboard.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AdminDashboard implements OnInit {
+export class AdminDashboard implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly broadcastForm = new FormGroup({
     alert_type: new FormControl('Flood', {
@@ -49,6 +52,8 @@ export class AdminDashboard implements OnInit {
   statsLoading = true;
   insightsData: { community_avg_temp: number; total_farms_included: number } | null =
     null;
+  
+  private destroy$ = new Subject<void>();
 
   constructor(private readonly farmService: FarmService) {}
 
@@ -70,8 +75,14 @@ export class AdminDashboard implements OnInit {
     this.loadQuickStats();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private setBroadcastLoading(isLoading: boolean): void {
     this.alertLoading = isLoading;
+    this.cdr.markForCheck();
 
     if (isLoading) {
       this.broadcastForm.disable({ emitEvent: false });
@@ -83,6 +94,7 @@ export class AdminDashboard implements OnInit {
 
   private setInsightsLoading(isLoading: boolean): void {
     this.insightsLoading = isLoading;
+    this.cdr.markForCheck();
 
     if (isLoading) {
       this.insightsForm.disable({ emitEvent: false });
@@ -94,18 +106,23 @@ export class AdminDashboard implements OnInit {
 
   private loadQuickStats(): void {
     this.statsLoading = true;
+    this.cdr.markForCheck();
 
-    this.farmService.getFarms(1, 1).subscribe({
-      next: (response) => {
-        this.totalFarmsTracked =
-          response.pagination?.total ?? response.data?.length ?? 0;
-        this.statsLoading = false;
-      },
-      error: () => {
-        this.totalFarmsTracked = 0;
-        this.statsLoading = false;
-      },
-    });
+    this.farmService.getFarms(1, 1)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.totalFarmsTracked =
+            response.pagination?.total ?? response.data?.length ?? 0;
+          this.statsLoading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.totalFarmsTracked = 0;
+          this.statsLoading = false;
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {
@@ -117,12 +134,11 @@ export class AdminDashboard implements OnInit {
       : fallback;
   }
 
-  /**
-   * Broadcasts an admin alert to farms within the provided GeoJSON polygon.
-   */
+
   onBroadcast(): void {
     if (this.broadcastForm.invalid) {
       this.broadcastForm.markAllAsTouched();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -137,6 +153,7 @@ export class AdminDashboard implements OnInit {
       this.setBroadcastLoading(false);
       this.alertError =
         'danger_zone must be valid GeoJSON Polygon JSON with coordinates.';
+      this.cdr.markForCheck();
       return;
     }
 
@@ -147,27 +164,31 @@ export class AdminDashboard implements OnInit {
 
     this.farmService
       .broadcastAlert(payload)
-      .pipe(finalize(() => this.setBroadcastLoading(false)))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.setBroadcastLoading(false))
+      )
       .subscribe({
         next: (response) => {
           this.farmsNotified = response.farms_notified;
           this.alertMessage = response.message || 'Alert broadcast successful.';
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.alertError = this.getErrorMessage(
             err,
             'Alert broadcast failed. The request timed out or the server could not process the GeoJSON polygon.'
           );
+          this.cdr.markForCheck();
         },
       });
   }
 
-  /**
-   * Loads regional insight metrics for the selected area name.
-   */
+
   loadRegionalInsights(): void {
     if (this.insightsForm.invalid) {
       this.insightsForm.markAllAsTouched();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -179,23 +200,26 @@ export class AdminDashboard implements OnInit {
 
     this.farmService
       .getRegionalInsights(regionName)
-      .pipe(finalize(() => this.setInsightsLoading(false)))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => this.setInsightsLoading(false))
+      )
       .subscribe({
         next: (response) => {
           this.insightsData = response.data;
+          this.cdr.markForCheck();
         },
         error: (err) => {
           this.insightsError = this.getErrorMessage(
             err,
             'Regional insights are unavailable for this region. Please try another area name.'
           );
+          this.cdr.markForCheck();
         },
       });
   }
 
-  /**
-   * Validates and parses a GeoJSON polygon payload.
-   */
+
   private parseDangerZone(
     rawJson: string
   ): { type: 'Polygon'; coordinates: number[][][] } | null {
