@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   AbstractControl,
@@ -10,7 +10,8 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs/operators';
+import { Subject } from 'rxjs';
+import { finalize, takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth.service';
 
 const passwordMatchValidator: ValidatorFn = (
@@ -32,8 +33,9 @@ const passwordMatchValidator: ValidatorFn = (
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './register.html',
   styleUrl: './register.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Register {
+export class Register implements OnDestroy {
   readonly registerForm = new FormGroup(
     {
       username: new FormControl('', {
@@ -62,15 +64,23 @@ export class Register {
   verificationLink = '';
   verifyLoading = false;
   verifySuccess = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {}
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   onRegister(): void {
     if (this.registerForm.invalid) {
       this.registerForm.markAllAsTouched();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -79,6 +89,7 @@ export class Register {
     this.successMessage = '';
     this.verificationLink = '';
     this.verifySuccess = false;
+    this.cdr.markForCheck();
 
     this.authService
       .register({
@@ -86,12 +97,19 @@ export class Register {
         email: this.registerForm.controls.email.value.trim(),
         password: this.registerForm.controls.password.value,
       })
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.loading = false;
+          this.cdr.markForCheck();
+        })
+      )
       .subscribe({
         next: (response) => {
           this.successMessage = response.message || 'Registration successful. Please verify your email.';
           this.verificationLink = response.verification_link || '';
           this.registerForm.reset();
+          this.cdr.markForCheck();
         },
         error: (err: unknown) => {
           const errorPayload = err as { error?: { message?: string }; status?: number };
@@ -102,6 +120,7 @@ export class Register {
               errorPayload.error?.message ||
               'Registration failed. Please review your details and try again.';
           }
+          this.cdr.markForCheck();
         },
       });
   }
@@ -110,21 +129,35 @@ export class Register {
     if (!this.verificationLink) return;
     this.verifyLoading = true;
     this.errorMessage = '';
+    this.cdr.markForCheck();
 
     this.authService
       .verifyEmail(this.verificationLink)
-      .pipe(finalize(() => (this.verifyLoading = false)))
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.verifyLoading = false;
+          this.cdr.markForCheck();
+        })
+      )
       .subscribe({
         next: (res) => {
           this.verifySuccess = true;
-          this.successMessage = res.message || 'Email verified successfully! You can now log in.';
+          this.successMessage = '✅ ' + (res.message || 'Email verified successfully!');
           this.verificationLink = '';
+          this.cdr.markForCheck();
+          
+          // Navigate to login after 2 seconds
+          setTimeout(() => {
+            void this.router.navigate(['/login']);
+          }, 2000);
         },
         error: (err: unknown) => {
           const errorPayload = err as { error?: { message?: string } };
           this.errorMessage =
             errorPayload.error?.message ||
             'Verification failed. The link may have expired — please register again.';
+          this.cdr.markForCheck();
         },
       });
   }
