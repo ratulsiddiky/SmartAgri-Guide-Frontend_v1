@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth.service';
 import { NotificationService } from '../../../services/notification.service';
 
@@ -12,7 +14,7 @@ import { NotificationService } from '../../../services/notification.service';
   templateUrl: './login.html',
   styleUrl: './login.css',
 })
-export class Login {
+export class Login implements OnDestroy {
   readonly loginForm = new FormGroup({
     username: new FormControl('', {
       nonNullable: true,
@@ -26,6 +28,7 @@ export class Login {
 
   errorMessage = '';
   loading = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     readonly authService: AuthService,
@@ -35,6 +38,11 @@ export class Login {
     if (this.authService.isAuthenticated()) {
       void this.router.navigate(['/home']);
     }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   onLogin(): void {
@@ -55,17 +63,19 @@ export class Login {
     this.loading = true;
     this.errorMessage = '';
 
-    this.authService.login(username, password).subscribe({
-      next: () => {
-        this.loading = false;
-        void this.router.navigate(['/home']);
-      },
-      error: (err) => {
-        this.loading = false;
-        this.errorMessage =
-          err.error?.message || 'Login failed. Please check your credentials.';
-        this.notificationService.showError(this.errorMessage);
-      },
-    });
+    this.authService.login(username, password)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.loading = false;
+          void this.router.navigate(['/home']);
+        },
+        error: (err) => {
+          this.loading = false;
+          this.errorMessage =
+            err.error?.message || 'Login failed. Please check your credentials.';
+          this.notificationService.showError(this.errorMessage);
+        },
+      });
   }
 }
