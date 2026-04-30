@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +8,6 @@ import { Farm, FarmSensor } from '../../../models/farm.model';
 import { ApiService } from '../../../services/api.service';
 import { FarmService } from '../../../services/farm.service';
 import { HighlightStatusDirective } from '../../../directives/highlight-status.directive';
-
 
 interface FarmInsights {
   average_temp?: number;
@@ -49,20 +48,21 @@ export class FarmDetail implements OnInit, OnDestroy {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly api: ApiService,
-    private readonly farmService: FarmService
+    private readonly farmService: FarmService,
+    private readonly cdr: ChangeDetectorRef  
   ) {}
 
   get farmId(): string {
     return this.route.snapshot.paramMap.get('id') || '';
   }
 
-  // Lifecycle hook now only handles initialization
   ngOnInit() {
     if (!this.farmId || this.farmId === 'undefined') {
       this.error = true;
       this.errorMessage =
         'The farm identifier is missing or invalid. Please return to All Farms and try again.';
       this.loading = false;
+      this.cdr.markForCheck(); 
       return;
     }
     this.loadFarmData();
@@ -77,6 +77,7 @@ export class FarmDetail implements OnInit, OnDestroy {
     this.loading = true;
     this.error = false;
     this.errorMessage = '';
+    this.cdr.markForCheck(); 
 
     forkJoin({
       farm: this.farmService.getFarmById(this.farmId),
@@ -90,6 +91,7 @@ export class FarmDetail implements OnInit, OnDestroy {
         this.insights = data.insights.dashboard_data as FarmInsights;
         this.irrigation = data.irrigation as IrrigationStatus;
         this.loading = false;
+        this.cdr.markForCheck();  
       },
       error: (err) => {
         this.error = true;
@@ -97,15 +99,16 @@ export class FarmDetail implements OnInit, OnDestroy {
           `Unable to load farm '${this.farmId}'. Please refresh and try again.`;
         console.error(this.errorMessage);
         this.loading = false;
+        this.cdr.markForCheck(); 
       },
     });
   }
 
-
-
   syncWeather() {
     this.syncLoading = true;
     this.syncMessage = '';
+    this.cdr.markForCheck(); 
+    
     this.farmService.syncWeather(this.farmId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -113,6 +116,7 @@ export class FarmDetail implements OnInit, OnDestroy {
           this.syncMessage = '✅ Weather synced successfully.';
           this.showToast('Weather synced successfully.', 'success');
           this.syncLoading = false;
+          this.cdr.markForCheck(); 
           this.loadFarmData();
         },
         error: (err) => {
@@ -122,6 +126,7 @@ export class FarmDetail implements OnInit, OnDestroy {
           this.syncMessage = `❌ ${message}`;
           this.showToast(message, 'danger');
           this.syncLoading = false;
+          this.cdr.markForCheck();  
         },
       });
   }
@@ -138,12 +143,14 @@ export class FarmDetail implements OnInit, OnDestroy {
           this.sensorMessage = 'Sensor added successfully.';
           this.showSensorForm = false;
           this.newSensor = { sensor_id: '', type: '' };
+          this.cdr.markForCheck();  
           this.loadFarmData();
         },
         error: (err) => {
           this.sensorMessage =
             this.api.getErrorMessage(err) ||
             `Unable to add the sensor to farm '${this.farmId}'. Please check the sensor details and try again.`;
+          this.cdr.markForCheck(); 
         },
       });
   }
@@ -151,10 +158,13 @@ export class FarmDetail implements OnInit, OnDestroy {
   showToast(message: string, type: 'success' | 'danger'): void {
     this.toastMessage = message;
     this.toastType = type;
+    this.cdr.markForCheck();  
+    
     timer(2500)
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         this.toastMessage = '';
+        this.cdr.markForCheck(); 
       });
   }
 }

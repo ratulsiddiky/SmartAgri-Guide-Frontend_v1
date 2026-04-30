@@ -37,18 +37,20 @@ export const protectedRoutes: Routes = [
             (m) => m.FarmForm
           ),
       },
-      {
-        path: 'farms/:id/edit',
-        loadComponent: () =>
-          import('./components/farms/farm-form/farm-form').then(
-            (m) => m.FarmForm
-          ),
-      },
+      
       {
         path: 'farms/:id',
         loadComponent: () =>
           import('./components/farms/farm-detail/farm-detail').then(
             (m) => m.FarmDetail
+          ),
+      },
+      
+      {
+        path: 'farms/:id/edit',
+        loadComponent: () =>
+          import('./components/farms/farm-form/farm-form').then(
+            (m) => m.FarmForm
           ),
       },
       {

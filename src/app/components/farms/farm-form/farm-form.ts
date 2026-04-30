@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { ApiService } from '../../../services/api.service';
 import { FarmService } from '../../../services/farm.service';
 import { NotificationService } from '../../../services/notification.service';
@@ -12,8 +14,9 @@ import { NotificationService } from '../../../services/notification.service';
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './farm-form.html',
   styleUrl: './farm-form.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FarmForm implements OnInit {
+export class FarmForm implements OnInit, OnDestroy {
   readonly farmForm = new FormGroup({
     farm_name: new FormControl('', {
       nonNullable: true,
@@ -35,53 +38,67 @@ export class FarmForm implements OnInit {
   submitting = false;
   errorMessage = '';
   successMessage = '';
+  private destroy$ = new Subject<void>();
 
   constructor(
     private readonly apiService: ApiService,
     private readonly farmService: FarmService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
-    private readonly notificationService: NotificationService
+    private readonly notificationService: NotificationService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
     this.farmForm.enable();
     this.farmId = this.route.snapshot.paramMap.get('id') || '';
     this.isEditMode = !!this.farmId;
+    this.cdr.markForCheck();
 
     if (this.isEditMode) {
       this.loadFarmForEdit();
     }
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   loadFarmForEdit(): void {
     this.loading = true;
     this.errorMessage = '';
     this.farmForm.disable();
+    this.cdr.markForCheck();
 
-    this.farmService.getFarmById(this.farmId).subscribe({
-      next: (farm) => {
-        this.farmForm.patchValue({
-          farm_name: farm.farm_name || '',
-          crop_type: farm.crop_type || '',
-          area_name: farm.address?.area_name || '',
-        });
-        this.loading = false;
-        this.farmForm.enable();
-      },
-      error: (err) => {
-        this.errorMessage =
-          this.apiService.getErrorMessage(err) ||
-          `Unable to load farm '${this.farmId}' for editing. Please refresh and try again.`;
-        this.loading = false;
-        this.farmForm.enable();
-      },
-    });
+    this.farmService.getFarmById(this.farmId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (farm) => {
+          this.farmForm.patchValue({
+            farm_name: farm.farm_name || '',
+            crop_type: farm.crop_type || '',
+            area_name: farm.address?.area_name || '',
+          });
+          this.loading = false;
+          this.farmForm.enable();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.errorMessage =
+            this.apiService.getErrorMessage(err) ||
+            `Unable to load farm '${this.farmId}' for editing. Please refresh and try again.`;
+          this.loading = false;
+          this.farmForm.enable();
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   onSubmit(): void {
     if (this.farmForm.invalid) {
       this.farmForm.markAllAsTouched();
+      this.cdr.markForCheck();
       return;
     }
 
@@ -97,6 +114,7 @@ export class FarmForm implements OnInit {
     this.errorMessage = '';
     this.successMessage = '';
     this.farmForm.disable();
+    this.cdr.markForCheck();
 
     if (this.isEditMode) {
       this.updateFarm(payload);
@@ -111,28 +129,35 @@ export class FarmForm implements OnInit {
     crop_type: string;
     address: { area_name: string };
   }): void {
-    this.farmService.createFarm(payload).subscribe({
-      next: (response) => {
-        this.successMessage = response.message || 'Farm created successfully.';
-        this.notificationService.showSuccess(this.successMessage);
-        this.submitting = false;
-        this.farmForm.enable();
-        const createdFarmId = response.farm_id;
-        if (createdFarmId) {
-          void this.router.navigate(['/farms', createdFarmId]);
-          return;
-        }
-        void this.router.navigate(['/farms']);
-      },
-      error: (err) => {
-        this.errorMessage =
-          this.apiService.getErrorMessage(err) ||
-          'Unable to create the farm. Please correct the form fields and try again.';
-        this.notificationService.showError(this.errorMessage);
-        this.submitting = false;
-        this.farmForm.enable();
-      },
-    });
+    this.farmService.createFarm(payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.successMessage = response.message || 'Farm created successfully.';
+          this.notificationService.showSuccess(this.successMessage);
+          this.submitting = false;
+          this.farmForm.enable();
+          this.cdr.markForCheck();
+          
+          const createdFarmId = response.farm_id;
+          setTimeout(() => {
+            if (createdFarmId) {
+              void this.router.navigate(['/farms', createdFarmId]);
+              return;
+            }
+            void this.router.navigate(['/farms']);
+          }, 1500);
+        },
+        error: (err) => {
+          this.errorMessage =
+            this.apiService.getErrorMessage(err) ||
+            'Unable to create the farm. Please correct the form fields and try again.';
+          this.notificationService.showError(this.errorMessage);
+          this.submitting = false;
+          this.farmForm.enable();
+          this.cdr.markForCheck();
+        },
+      });
   }
 
   updateFarm(payload: {
@@ -140,22 +165,30 @@ export class FarmForm implements OnInit {
     crop_type: string;
     address: { area_name: string };
   }): void {
-    this.farmService.updateFarm(this.farmId, payload).subscribe({
-      next: (response) => {
-        this.successMessage = response.message || 'Farm updated successfully.';
-        this.notificationService.showSuccess(this.successMessage);
-        this.submitting = false;
-        this.farmForm.enable();
-        void this.router.navigate(['/farms', this.farmId]);
-      },
-      error: (err) => {
-        this.errorMessage =
-          this.apiService.getErrorMessage(err) ||
-          `Unable to update farm '${this.farmId}'. Please review your changes and try again.`;
-        this.notificationService.showError(this.errorMessage);
-        this.submitting = false;
-        this.farmForm.enable();
-      },
-    });
+    this.farmService.updateFarm(this.farmId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.successMessage = response.message || 'Farm updated successfully.';
+          this.notificationService.showSuccess(this.successMessage);
+          this.submitting = false;
+          this.farmForm.enable();
+          this.cdr.markForCheck();
+          
+          
+          setTimeout(() => {
+            void this.router.navigate(['/farms', this.farmId]);
+          }, 1500);
+        },
+        error: (err) => {
+          this.errorMessage =
+            this.apiService.getErrorMessage(err) ||
+            `Unable to update farm '${this.farmId}'. Please review your changes and try again.`;
+          this.notificationService.showError(this.errorMessage);
+          this.submitting = false;
+          this.farmForm.enable();
+          this.cdr.markForCheck();
+        },
+      });
   }
 }
