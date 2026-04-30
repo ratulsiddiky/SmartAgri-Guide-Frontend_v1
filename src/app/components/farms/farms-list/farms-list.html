@@ -132,11 +132,11 @@
                 [routerLink]="['/farms', farm._id]">
                 View Full Dashboard →
               </a>
-              <a class="btn btn-outline-primary btn-sm"
-                [routerLink]="['/farms', farm._id, 'edit']">
-                Edit Farm
-              </a>
-              @if (authService.getRole() === 'admin') {
+              @if (authService.currentUserSignal()?._id === farm.owner_id || authService.currentUserSignal()?.role === 'admin') {
+                <a class="btn btn-outline-primary btn-sm"
+                  [routerLink]="['/farms', farm._id, 'edit']">
+                  Edit Farm
+                </a>
                 <button
                   type="button"
                   class="btn btn-outline-danger btn-sm"

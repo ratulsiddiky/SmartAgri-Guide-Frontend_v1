@@ -24,6 +24,7 @@ export class Home implements OnInit {
   }
 
   ngOnInit() {
+    this.isLoadingStats = true;
     this.farmService.getFarms(1, 1).subscribe({
       next: (res) => {
         this.totalFarms = res.pagination?.total || 0;
