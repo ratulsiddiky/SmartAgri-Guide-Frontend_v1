@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { FarmService } from '../../../services/farm.service';
 import { Farm } from '../../../models/farm.model';
 import { SensorStatusPipe } from '../../../pipes/sensor-status.pipe';
@@ -13,8 +15,9 @@ import { AuthService } from '../../../services/auth.service';
   imports: [CommonModule, FormsModule, RouterLink, SensorStatusPipe],
   templateUrl: './farms-list.html',
   styleUrl: './farms-list.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FarmsList implements OnInit {
+export class FarmsList implements OnInit, OnDestroy {
   farms: Farm[] = [];
   query = '';
   sortBy = 'name-asc';
@@ -27,6 +30,7 @@ export class FarmsList implements OnInit {
   errorMessage = '';
   deletingFarmId = '';
   showMyFarms = false;
+  private destroy$ = new Subject<void>();
 
   constructor(
     private readonly farmService: FarmService,
@@ -46,6 +50,11 @@ export class FarmsList implements OnInit {
     this.loadFarms();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   toggleMyFarms(): void {
     this.showMyFarms = !this.showMyFarms;
     this.query = '';
@@ -63,22 +72,24 @@ export class FarmsList implements OnInit {
       ? this.farmService.getMyFarms(this.page, this.pageSize)
       : this.farmService.getFarms(this.page, this.pageSize);
 
-    request.subscribe({
-      next: (response) => {
-        this.totalFarms = response.pagination.total;
-        this.hasNext = response.pagination.has_next;
-        this.farms = this.sortFarms(response.data);
-        this.loading = false;
-      },
-      error: (err) => {
-        this.error = true;
-        this.errorMessage = this.getErrorMessage(
-          err,
-          'Could not connect to the server. Please make sure the backend is running on port 5001.'
-        );
-        this.loading = false;
-      },
-    });
+    request
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.totalFarms = response.pagination.total;
+          this.hasNext = response.pagination.has_next;
+          this.farms = this.sortFarms(response.data);
+          this.loading = false;
+        },
+        error: (err) => {
+          this.error = true;
+          this.errorMessage = this.getErrorMessage(
+            err,
+            'Could not connect to the server. Please make sure the backend is running on port 5001.'
+          );
+          this.loading = false;
+        },
+      });
   }
 
 
@@ -95,29 +106,31 @@ export class FarmsList implements OnInit {
     this.error = false;
     this.errorMessage = '';
 
-    this.farmService.searchFarms(searchTerm).subscribe({
-      next: (data) => {
-        this.page = 1;
-        this.totalFarms = data.length;
-        this.hasNext = false;
-        this.farms = this.sortFarms(data);
-        this.loading = false;
-      },
-      error: (err) => {
-        console.error(
-          this.getErrorMessage(
+    this.farmService.searchFarms(searchTerm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (data) => {
+          this.page = 1;
+          this.totalFarms = data.length;
+          this.hasNext = false;
+          this.farms = this.sortFarms(data);
+          this.loading = false;
+        },
+        error: (err) => {
+          console.error(
+            this.getErrorMessage(
+              err,
+              `Unable to search farms for '${searchTerm}'. Please try a different term.`
+            )
+          );
+          this.error = true;
+          this.errorMessage = this.getErrorMessage(
             err,
-            `Unable to search farms for '${searchTerm}'. Please try a different term.`
-          )
-        );
-        this.error = true;
-        this.errorMessage = this.getErrorMessage(
-          err,
-          'Search failed. Please try a different term.'
-        );
-        this.loading = false;
-      },
-    });
+            'Search failed. Please try a different term.'
+          );
+          this.loading = false;
+        },
+      });
   }
 
 
@@ -172,24 +185,26 @@ export class FarmsList implements OnInit {
     this.error = false;
     this.errorMessage = '';
 
-    this.farmService.deleteFarm(farmId).subscribe({
-      next: () => {
-        this.deletingFarmId = '';
-        if (this.query.trim()) {
-          this.onSearch();
-          return;
-        }
-        this.loadFarms(this.page);
-      },
-      error: (err) => {
-        this.deletingFarmId = '';
-        this.error = true;
-        this.errorMessage = this.getErrorMessage(
-          err,
-          'Delete failed. You may need admin permissions to remove this farm.'
-        );
-      },
-    });
+    this.farmService.deleteFarm(farmId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.deletingFarmId = '';
+          if (this.query.trim()) {
+            this.onSearch();
+            return;
+          }
+          this.loadFarms(this.page);
+        },
+        error: (err) => {
+          this.deletingFarmId = '';
+          this.error = true;
+          this.errorMessage = this.getErrorMessage(
+            err,
+            'Delete failed. You may need admin permissions to remove this farm.'
+          );
+        },
+      });
   }
 
 
