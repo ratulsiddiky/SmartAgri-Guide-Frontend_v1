@@ -64,6 +64,11 @@ login(username: string, password: string): Observable<AuthResponse> {
     });
   }
 
+
+  verifyEmail(verificationLink: string): Observable<{ message: string }> {
+    return this.http.get<{ message: string }>(verificationLink);
+  }
+
   logout() {
     return this.http
       .get(`${this.baseUrl}/logout`)

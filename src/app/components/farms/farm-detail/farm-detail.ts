@@ -7,6 +7,7 @@ import { Farm, FarmSensor } from '../../../models/farm.model';
 import { ApiService } from '../../../services/api.service';
 import { FarmService } from '../../../services/farm.service';
 import { HighlightStatusDirective } from '../../../directives/highlight-status.directive';
+import { SensorStatusPipe } from '../../../pipes/sensor-status.pipe';
 
 interface FarmInsights {
   average_temp?: number;
@@ -23,7 +24,7 @@ interface IrrigationStatus {
 @Component({
   selector: 'app-farm-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, HighlightStatusDirective],
+  imports: [CommonModule, RouterLink, FormsModule, HighlightStatusDirective, SensorStatusPipe],
   templateUrl: './farm-detail.html',
   styleUrl: './farm-detail.css',
 })

@@ -10,6 +10,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../../services/auth.service';
 
 const passwordMatchValidator: ValidatorFn = (
@@ -59,6 +60,8 @@ export class Register {
   errorMessage = '';
   successMessage = '';
   verificationLink = '';
+  verifyLoading = false;
+  verifySuccess = false;
 
   constructor(
     private readonly authService: AuthService,
@@ -75,6 +78,7 @@ export class Register {
     this.errorMessage = '';
     this.successMessage = '';
     this.verificationLink = '';
+    this.verifySuccess = false;
 
     this.authService
       .register({
@@ -82,19 +86,45 @@ export class Register {
         email: this.registerForm.controls.email.value.trim(),
         password: this.registerForm.controls.password.value,
       })
+      .pipe(finalize(() => (this.loading = false)))
       .subscribe({
         next: (response) => {
-          this.loading = false;
           this.successMessage = response.message || 'Registration successful. Please verify your email.';
           this.verificationLink = response.verification_link || '';
           this.registerForm.reset();
         },
         error: (err: unknown) => {
-          this.loading = false;
+          const errorPayload = err as { error?: { message?: string }; status?: number };
+          if (errorPayload.status === 409) {
+            this.errorMessage = 'This email or username is already registered. Please log in or use a different address.';
+          } else {
+            this.errorMessage =
+              errorPayload.error?.message ||
+              'Registration failed. Please review your details and try again.';
+          }
+        },
+      });
+  }
+
+  verifyEmailInline(): void {
+    if (!this.verificationLink) return;
+    this.verifyLoading = true;
+    this.errorMessage = '';
+
+    this.authService
+      .verifyEmail(this.verificationLink)
+      .pipe(finalize(() => (this.verifyLoading = false)))
+      .subscribe({
+        next: (res) => {
+          this.verifySuccess = true;
+          this.successMessage = res.message || 'Email verified successfully! You can now log in.';
+          this.verificationLink = '';
+        },
+        error: (err: unknown) => {
           const errorPayload = err as { error?: { message?: string } };
           this.errorMessage =
             errorPayload.error?.message ||
-            'Registration failed. Please review your details and try again.';
+            'Verification failed. The link may have expired — please register again.';
         },
       });
   }
@@ -103,4 +133,3 @@ export class Register {
     void this.router.navigate(['/login']);
   }
 }
-

@@ -135,8 +135,10 @@
               @if (authService.currentUserSignal()?._id === farm.owner_id || authService.currentUserSignal()?.role === 'admin') {
                 <a class="btn btn-outline-primary btn-sm"
                   [routerLink]="['/farms', farm._id, 'edit']">
-                  Edit Farm
+                  ✏️ Edit Farm
                 </a>
+              }
+              @if (authService.currentUserSignal()?.role === 'admin') {
                 <button
                   type="button"
                   class="btn btn-outline-danger btn-sm"
@@ -147,7 +149,7 @@
                     <span class="spinner-border spinner-border-sm me-1"></span>
                     Deleting...
                   } @else {
-                    Delete
+                    🗑️ Delete
                   }
                 </button>
               }
