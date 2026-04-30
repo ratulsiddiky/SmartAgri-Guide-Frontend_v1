@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 import { Farm } from '../models/farm.model';
 
@@ -96,28 +96,21 @@ export class ApiService {
   }
 
   searchFarms(query: string) {
+    const params = new HttpParams().set('q', query);
     return this.http.get<{ data: Farm[] }>(
-      `${this.baseUrl}/farms/search?q=${encodeURIComponent(query)}`
+      `${this.baseUrl}/farms/search`,
+      { params }
     );
   }
 
-  /**
-   * Creates a new farm record in the backend.
-   */
   createFarm(data: Partial<Farm>) {
     return this.http.post<FarmMutationResponse>(`${this.baseUrl}/farms`, data);
   }
 
-  /**
-   * Updates an existing farm record by identifier.
-   */
   updateFarm(id: string, data: Partial<Farm>) {
     return this.http.put<FarmMutationResponse>(`${this.baseUrl}/farms/${id}`, data);
   }
 
-  /**
-   * Deletes a farm record by identifier.
-   */
   deleteFarm(id: string) {
     return this.http.delete<void>(`${this.baseUrl}/farms/${id}`);
   }
@@ -140,9 +133,6 @@ export class ApiService {
     return this.http.post<void>(`${this.baseUrl}/farms/${id}/sensors`, sensor);
   }
 
-  /**
-   * Broadcasts an emergency alert to farms inside a GeoJSON polygon.
-   */
   broadcastAlert(payload: BroadcastAlertRequest) {
     return this.http.post<BroadcastAlertResponse>(
       `${this.baseUrl}/farms/alerts/broadcast`,
@@ -150,9 +140,6 @@ export class ApiService {
     );
   }
 
-  /**
-   * Fetches community weather averages for a region name.
-   */
   getRegionalInsights(regionName: string) {
     return this.http.get<RegionalInsightsResponse>(
       `${this.baseUrl}/farms/region/${encodeURIComponent(regionName)}/insights`
