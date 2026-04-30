@@ -61,9 +61,6 @@ export class Register implements OnDestroy {
   loading = false;
   errorMessage = '';
   successMessage = '';
-  verificationLink = '';
-  verifyLoading = false;
-  verifySuccess = false;
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -87,8 +84,6 @@ export class Register implements OnDestroy {
     this.loading = true;
     this.errorMessage = '';
     this.successMessage = '';
-    this.verificationLink = '';
-    this.verifySuccess = false;
     this.cdr.markForCheck();
 
     this.authService
@@ -106,10 +101,13 @@ export class Register implements OnDestroy {
       )
       .subscribe({
         next: (response) => {
-          this.successMessage = response.message || 'Registration successful. Please verify your email.';
-          this.verificationLink = response.verification_link || '';
-          this.registerForm.reset();
+          this.successMessage = response.message || '✅ Account created successfully!';
           this.cdr.markForCheck();
+          
+          
+          setTimeout(() => {
+            void this.router.navigate(['/login']);
+          }, 2000);
         },
         error: (err: unknown) => {
           const errorPayload = err as { error?: { message?: string }; status?: number };
@@ -120,43 +118,6 @@ export class Register implements OnDestroy {
               errorPayload.error?.message ||
               'Registration failed. Please review your details and try again.';
           }
-          this.cdr.markForCheck();
-        },
-      });
-  }
-
-  verifyEmailInline(): void {
-    if (!this.verificationLink) return;
-    this.verifyLoading = true;
-    this.errorMessage = '';
-    this.cdr.markForCheck();
-
-    this.authService
-      .verifyEmail(this.verificationLink)
-      .pipe(
-        takeUntil(this.destroy$),
-        finalize(() => {
-          this.verifyLoading = false;
-          this.cdr.markForCheck();
-        })
-      )
-      .subscribe({
-        next: (res) => {
-          this.verifySuccess = true;
-          this.successMessage = '✅ ' + (res.message || 'Email verified successfully!');
-          this.verificationLink = '';
-          this.cdr.markForCheck();
-          
-          // Navigate to login after 2 seconds
-          setTimeout(() => {
-            void this.router.navigate(['/login']);
-          }, 2000);
-        },
-        error: (err: unknown) => {
-          const errorPayload = err as { error?: { message?: string } };
-          this.errorMessage =
-            errorPayload.error?.message ||
-            'Verification failed. The link may have expired — please register again.';
           this.cdr.markForCheck();
         },
       });
