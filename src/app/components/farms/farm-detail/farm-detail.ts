@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { finalize } from 'rxjs/operators';
+import { Subject, forkJoin, timer } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { Farm, FarmSensor } from '../../../models/farm.model';
 import { ApiService } from '../../../services/api.service';
 import { FarmService } from '../../../services/farm.service';
@@ -27,8 +28,9 @@ interface IrrigationStatus {
   imports: [CommonModule, RouterLink, FormsModule, HighlightStatusDirective, SensorStatusPipe],
   templateUrl: './farm-detail.html',
   styleUrl: './farm-detail.css',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class FarmDetail implements OnInit {
+export class FarmDetail implements OnInit, OnDestroy {
   farm: Farm | null = null;
   insights: FarmInsights | null = null;
   irrigation: IrrigationStatus | null = null;
@@ -42,6 +44,7 @@ export class FarmDetail implements OnInit {
   showSensorForm = false;
   newSensor: FarmSensor = { sensor_id: '', type: '' };
   sensorMessage = '';
+  private destroy$ = new Subject<void>();
 
   constructor(
     private readonly route: ActivatedRoute,
@@ -62,76 +65,65 @@ export class FarmDetail implements OnInit {
       this.loading = false;
       return;
     }
-    this.loadFarmData(); // Call the dedicated refresh method
+    this.loadFarmData();
   }
 
-  // Extracted logic into a reusable method
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private loadFarmData(): void {
     this.loading = true;
     this.error = false;
     this.errorMessage = '';
 
-    this.farmService
-      .getFarmById(this.farmId)
-      .pipe(finalize(() => (this.loading = false)))
-      .subscribe({
-        next: (data) => {
-          this.farm = data;
-          this.loadInsights();
-          this.loadIrrigation();
-        },
-        error: (err) => {
-          this.error = true;
-          this.errorMessage = this.api.getErrorMessage(err) ||
-            `Unable to load farm '${this.farmId}'. Please refresh and try again.`;
-          console.error(this.errorMessage);
-        },
-      });
-  }
-
-  loadInsights() {
-    this.farmService.getFarmInsights(this.farmId).subscribe({
-      next: (data) => (this.insights = data.dashboard_data as FarmInsights),
+    forkJoin({
+      farm: this.farmService.getFarmById(this.farmId),
+      insights: this.farmService.getFarmInsights(this.farmId),
+      irrigation: this.farmService.checkIrrigation(this.farmId),
+    })
+    .pipe(takeUntil(this.destroy$))
+    .subscribe({
+      next: (data) => {
+        this.farm = data.farm;
+        this.insights = data.insights.dashboard_data as FarmInsights;
+        this.irrigation = data.irrigation as IrrigationStatus;
+        this.loading = false;
+      },
       error: (err) => {
-        console.error(
-          this.api.getErrorMessage(err) ||
-            `Unable to load insights for farm '${this.farmId}'.`
-        );
+        this.error = true;
+        this.errorMessage = this.api.getErrorMessage(err) ||
+          `Unable to load farm '${this.farmId}'. Please refresh and try again.`;
+        console.error(this.errorMessage);
+        this.loading = false;
       },
     });
   }
 
-  loadIrrigation() {
-    this.farmService.checkIrrigation(this.farmId).subscribe({
-      next: (data) => (this.irrigation = data as IrrigationStatus),
-      error: (err) => {
-        console.error(
-          this.api.getErrorMessage(err) ||
-            `Unable to calculate irrigation status for farm '${this.farmId}'.`
-        );
-      },
-    });
-  }
+
 
   syncWeather() {
     this.syncLoading = true;
     this.syncMessage = '';
-    this.farmService.syncWeather(this.farmId).subscribe({
-      next: () => {
-        this.syncMessage = '✅ Weather synced successfully.';
-        this.showToast('Weather synced successfully.', 'success');
-        this.syncLoading = false;
-        this.loadFarmData(); // Replaced this.ngOnInit() with this.loadFarmData()
-      },
-      error: (err) => {
-        const message =
-          this.api.getErrorMessage(err) ||
-          `Weather sync failed for farm '${this.farmId}'. Please verify the coordinates and try again.`;
-        this.syncMessage = `❌ ${message}`;
-        this.showToast(message, 'danger');
-        this.syncLoading = false;
-      },
-    });
+    this.farmService.syncWeather(this.farmId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.syncMessage = '✅ Weather synced successfully.';
+          this.showToast('Weather synced successfully.', 'success');
+          this.syncLoading = false;
+          this.loadFarmData();
+        },
+        error: (err) => {
+          const message =
+            this.api.getErrorMessage(err) ||
+            `Weather sync failed for farm '${this.farmId}'. Please verify the coordinates and try again.`;
+          this.syncMessage = `❌ ${message}`;
+          this.showToast(message, 'danger');
+          this.syncLoading = false;
+        },
+      });
   }
 
   addSensor() {
@@ -139,29 +131,30 @@ export class FarmDetail implements OnInit {
       this.sensorMessage = 'Please fill in both fields.';
       return;
     }
-    this.farmService.addSensor(this.farmId, this.newSensor).subscribe({
-      next: () => {
-        this.sensorMessage = 'Sensor added successfully.';
-        this.showSensorForm = false;
-        this.newSensor = { sensor_id: '', type: '' };
-        this.loadFarmData(); // Replaced this.ngOnInit() with this.loadFarmData()
-      },
-      error: (err) => {
-        this.sensorMessage =
-          this.api.getErrorMessage(err) ||
-          `Unable to add the sensor to farm '${this.farmId}'. Please check the sensor details and try again.`;
-      },
-    });
+    this.farmService.addSensor(this.farmId, this.newSensor)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.sensorMessage = 'Sensor added successfully.';
+          this.showSensorForm = false;
+          this.newSensor = { sensor_id: '', type: '' };
+          this.loadFarmData();
+        },
+        error: (err) => {
+          this.sensorMessage =
+            this.api.getErrorMessage(err) ||
+            `Unable to add the sensor to farm '${this.farmId}'. Please check the sensor details and try again.`;
+        },
+      });
   }
 
-  /**
-   * Displays temporary toast feedback for key user actions.
-   */
   showToast(message: string, type: 'success' | 'danger'): void {
     this.toastMessage = message;
     this.toastType = type;
-    window.setTimeout(() => {
-      this.toastMessage = '';
-    }, 2500);
+    timer(2500)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.toastMessage = '';
+      });
   }
 }
