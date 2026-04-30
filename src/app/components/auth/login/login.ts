@@ -28,7 +28,7 @@ export class Login {
   loading = false;
 
   constructor(
-    private readonly authService: AuthService,
+    readonly authService: AuthService,
     private readonly router: Router,
     private readonly notificationService: NotificationService
   ) {

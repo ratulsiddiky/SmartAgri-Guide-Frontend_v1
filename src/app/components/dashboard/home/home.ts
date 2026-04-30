@@ -30,7 +30,9 @@ export class Home implements OnInit {
         this.totalFarms = res.pagination?.total || 0;
         this.isLoadingStats = false;
       },
-      error: () => {
+      error: (err) => {
+        console.error('Stats load failed', err);
+        this.totalFarms = 0;
         this.isLoadingStats = false;
       }
     });

@@ -30,6 +30,7 @@ export interface RegisterResponse {
 export class AuthService {
   private readonly baseUrl = environment.apiBaseUrl;
   readonly currentUserSignal = signal<User | null>(this.readSession());
+  readonly emailVerifiedSuccessfully = signal(false);
 
   constructor(
     private readonly http: HttpClient,

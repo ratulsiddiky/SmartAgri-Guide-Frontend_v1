@@ -53,8 +53,8 @@ export class FarmsList implements OnInit {
   }
 
   loadFarms(page = this.page): void {
-    this.farms = [];
     this.loading = true;
+    this.farms = [];
     this.error = false;
     this.errorMessage = '';
     this.page = page;
@@ -90,8 +90,8 @@ export class FarmsList implements OnInit {
       return;
     }
 
-    this.farms = [];
     this.loading = true;
+    this.farms = [];
     this.error = false;
     this.errorMessage = '';
 

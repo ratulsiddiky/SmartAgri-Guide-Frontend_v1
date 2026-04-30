@@ -10,6 +10,12 @@
         <div class="card-body p-4">
           <form [formGroup]="loginForm" (ngSubmit)="onLogin()" novalidate>
 
+          @if (authService.emailVerifiedSuccessfully()) {
+            <div class="alert alert-success py-2" role="alert">
+              ✅ Email verified successfully! You can now log in.
+            </div>
+          }
+
           @if (errorMessage) {
             <div class="alert alert-danger py-2" role="alert">
               {{ errorMessage }}
