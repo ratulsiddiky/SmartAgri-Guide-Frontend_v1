@@ -8,7 +8,7 @@ import { Farm, FarmSensor } from '../../../models/farm.model';
 import { ApiService } from '../../../services/api.service';
 import { FarmService } from '../../../services/farm.service';
 import { HighlightStatusDirective } from '../../../directives/highlight-status.directive';
-import { SensorStatusPipe } from '../../../pipes/sensor-status.pipe';
+
 
 interface FarmInsights {
   average_temp?: number;
